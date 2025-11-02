@@ -1,0 +1,222 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
+#include <iomanip>
+using namespace std;
+
+// Base Class: Product
+class Product {
+protected:
+    int productID;
+    string productName;
+    int quantity;
+    double purchasePrice;
+    double sellingPrice;
+
+public:
+    Product() : productID(0), productName(""), quantity(0), purchasePrice(0.0), sellingPrice(0.0) {}
+
+    virtual void inputData() {
+        cout << "Enter Product ID: ";
+        cin >> productID;
+        cin.ignore();
+        cout << "Enter Product Name: ";
+        getline(cin, productName);
+        cout << "Enter Quantity: ";
+        cin >> quantity;
+        cout << "Enter Purchase Price: ";
+        cin >> purchasePrice;
+        cout << "Enter Selling Price: ";
+        cin >> sellingPrice;
+    }
+
+    virtual void displayData() const {
+        cout << left << setw(10) << productID
+             << setw(20) << productName
+             << setw(10) << quantity
+             << setw(15) << purchasePrice
+             << setw(15) << sellingPrice;
+    }
+
+    virtual double calculateProfit() const {
+        return (sellingPrice - purchasePrice) * quantity;
+    }
+
+    virtual bool isLowStock() const {
+        return quantity < 10;
+    }
+
+    virtual string getType() const {
+        return "General";
+    }
+
+    int getID() const { return productID; }
+    string getName() const { return productName; }
+    int getQuantity() const { return quantity; }
+
+    virtual ~Product() {}
+};
+
+// Derived Class: PerishableProduct
+class PerishableProduct : public Product {
+    string expiryDate;
+
+public:
+    void inputData() override {
+        Product::inputData();
+        cout << "Enter Expiry Date (dd-mm-yyyy): ";
+        cin >> expiryDate;
+    }
+
+    void displayData() const override {
+        Product::displayData();
+        cout << setw(20) << expiryDate;
+    }
+
+    string getType() const override {
+        return "Perishable";
+    }
+
+    ~PerishableProduct() {}
+};
+
+// Report class to handle analytics
+class Report {
+public:
+    void generateProfitReport(const vector<Product*>& inventory) {
+        cout << "\n---------------- PROFIT REPORT ----------------\n";
+        double totalProfit = 0;
+        cout << left << setw(10) << "ID"
+             << setw(20) << "Name"
+             << setw(15) << "Profit" << endl;
+        cout << "------------------------------------------------\n";
+
+        for (auto* p : inventory) {
+            double profit = p->calculateProfit();
+            totalProfit += profit;
+            cout << left << setw(10) << p->getID()
+                 << setw(20) << p->getName()
+                 << setw(15) << profit << endl;
+        }
+
+        cout << "------------------------------------------------\n";
+        cout << "Total Profit: " << totalProfit << "\n";
+    }
+
+    void generateStockReport(const vector<Product*>& inventory) {
+        cout << "\n---------------- STOCK REPORT ----------------\n";
+        for (auto* p : inventory) {
+            if (p->isLowStock()) {
+                cout << "⚠️  Low stock: " << p->getName() << " (Qty: " << p->getQuantity() << ")\n";
+            }
+        }
+    }
+};
+
+// File Handling Functions
+void saveToFile(const vector<Product*>& inventory) {
+    ofstream file("inventory.txt");
+    for (auto* p : inventory) {
+        file << p->getType() << " "
+             << p->getID() << " "
+             << p->getName() << " "
+             << p->getQuantity() << " "
+             << p->calculateProfit() << "\n";
+    }
+    file.close();
+}
+
+void displayFromFile() {
+    ifstream file("inventory.txt");
+    string line;
+    cout << "\n------ FILE DATA ------\n";
+    while (getline(file, line)) {
+        cout << line << endl;
+    }
+    file.close();
+}
+
+// Main Function
+int main() {
+    vector<Product*> inventory;
+    Report report;
+    int choice;
+
+    do {
+        cout << "\n====================================";
+        cout << "\n   INVENTORY ANALYSIS SYSTEM";
+        cout << "\n====================================";
+        cout << "\n1. Add Product";
+        cout << "\n2. Display Products";
+        cout << "\n3. Generate Profit Report";
+        cout << "\n4. Generate Stock Report";
+        cout << "\n5. Save & View File Data";
+        cout << "\n6. Exit";
+        cout << "\nEnter your choice: ";
+        cin >> choice;
+
+        switch (choice) {
+            case 1: {
+                int type;
+                cout << "\n1. Regular Product\n2. Perishable Product\nEnter type: ";
+                cin >> type;
+
+                Product* p = nullptr;
+                if (type == 1)
+                    p = new Product();
+                else
+                    p = new PerishableProduct();
+
+                p->inputData();
+                inventory.push_back(p);
+                cout << "\n✅ Product added successfully!\n";
+                break;
+            }
+
+            case 2: {
+                cout << "\n---------------- PRODUCT LIST ----------------\n";
+                cout << left << setw(10) << "ID"
+                     << setw(20) << "Name"
+                     << setw(10) << "Qty"
+                     << setw(15) << "Purchase"
+                     << setw(15) << "Selling";
+                cout << setw(20) << "Expiry\n";
+                cout << "-------------------------------------------------------------\n";
+                for (auto* p : inventory) {
+                    p->displayData();
+                    cout << endl;
+                }
+                break;
+            }
+
+            case 3:
+                report.generateProfitReport(inventory);
+                break;
+
+            case 4:
+                report.generateStockReport(inventory);
+                break;
+
+            case 5:
+                saveToFile(inventory);
+                displayFromFile();
+                break;
+
+            case 6:
+                cout << "\nExiting program... All data saved.\n";
+                break;
+
+            default:
+                cout << "Invalid choice! Try again.\n";
+        }
+
+    } while (choice != 6);
+
+    // Free allocated memory
+    for (auto* p : inventory) {
+        delete p;
+    }
+
+    return 0;
+}
